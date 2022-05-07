@@ -5,7 +5,7 @@ colorFrom: pink
 colorTo: gray
 sdk: streamlit
 sdk_version: 1.2.0
-app_file: app.py
+app_file: critic/critic.py
 pinned: false
 license: afl-3.0
 ---
