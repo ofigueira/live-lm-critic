@@ -1,6 +1,6 @@
 ---
-title: Live Lm Critic
-emoji: 💻
+title: Live LM-Critic
+emoji: 💬
 colorFrom: pink
 colorTo: gray
 sdk: streamlit
