@@ -20,7 +20,7 @@ import streamlit as st
 
 st.subheader('Exploring Unsupervised Grammatical Error Correction with Transformer-Based Models')
 st.write('This live demonstration is adapted from the paper [LM-Critic: Language Models for Unsupervised Grammatical Error Correction](https://aclanthology.org/2021.emnlp-main.611.pdf) (EMNLP 2021) by Michihiro Yasunaga, Jure Leskovec, Percy Liang.')
-st.write('The below demo first loads several LMs that we use in the LM-Critic. You will be prompted to enter a sentence which will then be scored by each of the LM-Critics using different LMs.')
+st.write('Enter any sentence in the text box, press submit, and see the grammatical scoring and judgement results outputted by LM-Critic using different LMs dislpayed below. Upon running this for the first time, it will initialize each LM.')
 
 def get_gpt2_loss(model, tokenizer, input_ids, attention_mask, labels):
     with torch.no_grad():
@@ -142,132 +142,120 @@ def gpt2_critic(sent, model, tokenizer, verbose=1, cuda=False, fp16=True, seed='
         counter_example = [sents[best_idx], float(logps[best_idx])]
     return is_good, float(logps[0]), counter_example, return_string
 
-def init_lms():
+def gpt2():
+    ## GPT-2 LM (original LM-critic)
     placeholder_lm_name = st.empty()
-    prog = 0
-    my_bar = st.progress(prog)
-
-    if "nice_name_gpt2" not in st.session_state:
-        ## GPT-2 LM (original LM-critic)
-        model_name_gpt2 = 'gpt2'
-        nice_name_gpt2 = "GPT-2"
-        placeholder_lm_name.text(f"Initializing {nice_name_gpt2}...")
-        tokenizer_gpt2 = GPT2Tokenizer.from_pretrained(model_name_gpt2)
-        tokenizer_gpt2.pad_token = tokenizer_gpt2.eos_token
-        model_gpt2 = GPT2LMHeadModel.from_pretrained(model_name_gpt2)
-        model_gpt2.eval()
-        model_gpt2.cpu()
-        st.session_state["model_gpt2"] = model_gpt2
-        st.session_state["tokenizer_gpt2"] = tokenizer_gpt2
-        st.session_state["nice_name_gpt2"] = nice_name_gpt2
-
-    prog += 10
-    my_bar.progress(prog)    
-
-    if "nice_name_opt" not in st.session_state:
-        ## OPT LM
-        model_name_opt = "facebook/opt-350m"
-        nice_name_opt = "OPT"
-        placeholder_lm_name.text(f"Initializing {nice_name_opt}...")
-        model_opt = OPTForCausalLM.from_pretrained(model_name_opt)
-        tokenizer_opt = GPT2Tokenizer.from_pretrained(model_name_opt)
-        tokenizer_opt.pad_token = tokenizer_opt.eos_token
-        model_opt.eval()
-        model_opt.cpu()
-        st.session_state["model_opt"] = model_opt
-        st.session_state["tokenizer_opt"] = tokenizer_opt
-        st.session_state["nice_name_opt"] = nice_name_opt
-
-    prog += 10
-    my_bar.progress(prog)  
-
-    if "nice_name_gptneo" not in st.session_state:
-        ## GPT NEO
-        model_name_gptneo = "EleutherAI/gpt-neo-1.3B"
-        nice_name_gptneo = "GPT NEO"
-        placeholder_lm_name.text(f"Initializing {nice_name_gptneo}...")
-        model_gptneo = GPTNeoForCausalLM.from_pretrained(model_name_gptneo)
-        tokenizer_gptneo = GPT2Tokenizer.from_pretrained(model_name_gptneo)
-        tokenizer_gptneo.pad_token = tokenizer_gptneo.eos_token
-        model_gptneo.eval()
-        model_gptneo.cpu()
-        st.session_state["model_gptneo"] = model_gptneo
-        st.session_state["tokenizer_gptneo"] = tokenizer_gptneo
-        st.session_state["nice_name_gptneo"] = nice_name_gptneo
-
-    prog += 10
-    my_bar.progress(prog)  
-
-    if "nice_name_roberta" not in st.session_state:
-        ## RoBERTa
-        model_name_roberta = "roberta-base"
-        nice_name_roberta = "RoBERTa"
-        placeholder_lm_name.text(f"Initializing {nice_name_roberta}...")
-        tokenizer_roberta = RobertaTokenizer.from_pretrained(model_name_roberta)
-        config_roberta = RobertaConfig.from_pretrained(model_name_roberta)
-        config_roberta.is_decoder = True
-        model_roberta = RobertaForCausalLM.from_pretrained(model_name_roberta, config=config_roberta)
-        tokenizer_roberta.pad_token = tokenizer_roberta.eos_token
-        model_roberta.eval()
-        model_roberta.cpu()
-        st.session_state["model_roberta"] = model_gptneo
-        st.session_state["tokenizer_roberta"] = tokenizer_roberta
-        st.session_state["nice_name_roberta"] = nice_name_roberta
-
-    prog += 10
-    my_bar.progress(prog)  
-
-    if "nice_name_bart" not in st.session_state:
-        ## BART
-        model_name_bart = "facebook/bart-base"
-        nice_name_bart = "BART"
-        placeholder_lm_name.text(f"Initializing {nice_name_bart}...")
-        tokenizer_bart = BartTokenizer.from_pretrained(model_name_bart)
-        model_bart = BartForCausalLM.from_pretrained(model_name_bart, add_cross_attention=False)
-        assert model_bart.config.is_decoder, f"{model_bart.__class__} has to be configured as a decoder."
-        tokenizer_bart.pad_token = tokenizer_bart.eos_token
-        model_bart.eval()
-        model_bart.cpu()
-        st.session_state["model_bart"] = model_bart
-        st.session_state["tokenizer_bart"] = tokenizer_bart
-        st.session_state["nice_name_bart"] = nice_name_bart
-
-    prog += 10
-    my_bar.progress(prog)  
-
-    if "nice_name_xlmroberta" not in st.session_state:
-        ## XLM RoBERTa
-        model_name_xlmroberta = 'xlm-roberta-base'
-        nice_name_xlmroberta = 'XLM RoBERTa'
-        placeholder_lm_name.text(f"Initializing {nice_name_xlmroberta}...")
-        tokenizer_xlmroberta = XLMRobertaTokenizer.from_pretrained(model_name_xlmroberta)
-        config_xlmroberta = XLMRobertaConfig.from_pretrained(model_name_xlmroberta)
-        config_xlmroberta.is_decoder = True
-        model_xlmroberta = XLMRobertaForCausalLM.from_pretrained(model_name_xlmroberta, config=config_xlmroberta)
-        tokenizer_xlmroberta.pad_token = tokenizer_xlmroberta.eos_token
-        model_xlmroberta.eval()
-        model_xlmroberta.cpu()
-        st.session_state["model_xlmroberta"] = model_xlmroberta
-        st.session_state["tokenizer_xlmroberta"] = tokenizer_xlmroberta
-        st.session_state["nice_name_xlmroberta"] = nice_name_xlmroberta
-
-    prog += 10
-    my_bar.progress(prog)
+    model_name_gpt2 = 'gpt2'
+    nice_name_gpt2 = "GPT-2"
+    placeholder_lm_name.text(f"Initializing {nice_name_gpt2}...")
+    tokenizer_gpt2 = GPT2Tokenizer.from_pretrained(model_name_gpt2)
+    tokenizer_gpt2.pad_token = tokenizer_gpt2.eos_token
+    model_gpt2 = GPT2LMHeadModel.from_pretrained(model_name_gpt2)
+    model_gpt2.eval()
+    model_gpt2.cpu()
     placeholder_lm_name.empty()
-    my_bar.empty()
+    st.session_state["model_gpt2"] = model_gpt2
+    st.session_state["tokenizer_gpt2"] = tokenizer_gpt2
+    st.session_state["nice_name_gpt2"] = nice_name_gpt2
+
+def opt():
+    ## OPT LM
+    placeholder_lm_name = st.empty()
+    model_name_opt = "facebook/opt-350m"
+    nice_name_opt = "OPT"
+    placeholder_lm_name.text(f"Initializing {nice_name_opt}...")
+    model_opt = OPTForCausalLM.from_pretrained(model_name_opt)
+    tokenizer_opt = GPT2Tokenizer.from_pretrained(model_name_opt)
+    tokenizer_opt.pad_token = tokenizer_opt.eos_token
+    model_opt.eval()
+    model_opt.cpu()
+    placeholder_lm_name.empty()
+    st.session_state["model_opt"] = model_opt
+    st.session_state["tokenizer_opt"] = tokenizer_opt
+    st.session_state["nice_name_opt"] = nice_name_opt
+
+def gpt_neo():
+    ## GPT NEO
+    placeholder_lm_name = st.empty()
+    model_name_gptneo = "EleutherAI/gpt-neo-1.3B"
+    nice_name_gptneo = "GPT NEO"
+    placeholder_lm_name.text(f"Initializing {nice_name_gptneo}...")
+    model_gptneo = GPTNeoForCausalLM.from_pretrained(model_name_gptneo)
+    tokenizer_gptneo = GPT2Tokenizer.from_pretrained(model_name_gptneo)
+    tokenizer_gptneo.pad_token = tokenizer_gptneo.eos_token
+    model_gptneo.eval()
+    model_gptneo.cpu()
+    placeholder_lm_name.empty()
+    st.session_state["model_gptneo"] = model_gptneo
+    st.session_state["tokenizer_gptneo"] = tokenizer_gptneo
+    st.session_state["nice_name_gptneo"] = nice_name_gptneo
+
+def roberta():
+    ## RoBERTa
+    placeholder_lm_name = st.empty()
+    model_name_roberta = "roberta-base"
+    nice_name_roberta = "RoBERTa"
+    placeholder_lm_name.text(f"Initializing {nice_name_roberta}...")
+    tokenizer_roberta = RobertaTokenizer.from_pretrained(model_name_roberta)
+    config_roberta = RobertaConfig.from_pretrained(model_name_roberta)
+    config_roberta.is_decoder = True
+    model_roberta = RobertaForCausalLM.from_pretrained(model_name_roberta, config=config_roberta)
+    tokenizer_roberta.pad_token = tokenizer_roberta.eos_token
+    model_roberta.eval()
+    model_roberta.cpu()
+    placeholder_lm_name.empty()
+    st.session_state["model_roberta"] = model_roberta
+    st.session_state["tokenizer_roberta"] = tokenizer_roberta
+    st.session_state["nice_name_roberta"] = nice_name_roberta
+
+def bart():
+    ## BART
+    placeholder_lm_name = st.empty()
+    model_name_bart = "facebook/bart-base"
+    nice_name_bart = "BART"
+    placeholder_lm_name.text(f"Initializing {nice_name_bart}...")
+    tokenizer_bart = BartTokenizer.from_pretrained(model_name_bart)
+    model_bart = BartForCausalLM.from_pretrained(model_name_bart, add_cross_attention=False)
+    assert model_bart.config.is_decoder, f"{model_bart.__class__} has to be configured as a decoder."
+    tokenizer_bart.pad_token = tokenizer_bart.eos_token
+    model_bart.eval()
+    model_bart.cpu()
+    placeholder_lm_name.empty()
+    st.session_state["model_bart"] = model_bart
+    st.session_state["tokenizer_bart"] = tokenizer_bart
+    st.session_state["nice_name_bart"] = nice_name_bart
+
+def xlm_roberta():
+    ## XLM RoBERTa
+    placeholder_lm_name = st.empty()
+    model_name_xlmroberta = 'xlm-roberta-base'
+    nice_name_xlmroberta = 'XLM RoBERTa'
+    placeholder_lm_name.text(f"Initializing {nice_name_xlmroberta}...")
+    tokenizer_xlmroberta = XLMRobertaTokenizer.from_pretrained(model_name_xlmroberta)
+    config_xlmroberta = XLMRobertaConfig.from_pretrained(model_name_xlmroberta)
+    config_xlmroberta.is_decoder = True
+    model_xlmroberta = XLMRobertaForCausalLM.from_pretrained(model_name_xlmroberta, config=config_xlmroberta)
+    tokenizer_xlmroberta.pad_token = tokenizer_xlmroberta.eos_token
+    model_xlmroberta.eval()
+    model_xlmroberta.cpu()
+    placeholder_lm_name.empty()
+    st.session_state["model_xlmroberta"] = model_xlmroberta
+    st.session_state["tokenizer_xlmroberta"] = tokenizer_xlmroberta
+    st.session_state["nice_name_xlmroberta"] = nice_name_xlmroberta
 
 def main():
-    if "GPT-2" not in st.session_state:
-        init_lms()
-    sent = st.text_input('Enter a sentence:', value="")
+    form = st.form(key='my_form')
+    sent = form.text_input(label='Enter a sentence:', value="")
+    submit = form.form_submit_button(label='Submit')
 
-    ### LMs we are trying:
-    if sent != '':
+    if submit and sent != '':
         st.markdown(f"**Input Sentence**: {sent}")
         results = {}
 
         with st.spinner('Running with GPT-2 LM...'):
             ## GPT-2 LM (original LM-critic)
+            if "nice_name_gpt2" not in st.session_state:
+                gpt2()
             is_good, score, counter_example, return_string_GPT2 = gpt2_critic(sent, st.session_state['model_gpt2'], st.session_state['tokenizer_gpt2'])
         st.markdown("**Results with GPT-2 LM:**")
         st.write('\n'.join(return_string_GPT2))
@@ -275,6 +263,8 @@ def main():
 
         with st.spinner('Running with OPT LM...'):
             ## OPT LM
+            if "nice_name_opt" not in st.session_state:
+                opt()
             is_good, score, counter_example, return_string_OPT = gpt2_critic(sent, st.session_state['model_opt'], st.session_state['tokenizer_opt'])
         st.markdown("**Results with OPT LM:**")
         st.write('\n'.join(return_string_OPT))
@@ -282,6 +272,8 @@ def main():
 
         with st.spinner('Running with GPT NEO LM...'):
             ## GPT NEO
+            if "nice_name_gptneo" not in st.session_state:
+                gpt_neo()
             is_good, score, counter_example, return_string_GPTNEO = gpt2_critic(sent, st.session_state['model_gptneo'], st.session_state['tokenizer_gptneo'])
         st.markdown("**Results with GPT NEO LM:**")
         st.write('\n'.join(return_string_GPTNEO))
@@ -289,6 +281,8 @@ def main():
 
         with st.spinner('Running with RoBERTa LM...'):
             ## RoBERTa
+            if "nice_name_roberta" not in st.session_state:
+                roberta()
             is_good, score, counter_example, return_string_RoBERTa = gpt2_critic(sent, st.session_state['model_roberta'], st.session_state['tokenizer_roberta'])
         st.markdown("**Results with RoBERTa LM:**")
         st.write('\n'.join(return_string_RoBERTa))
@@ -296,6 +290,8 @@ def main():
 
         with st.spinner('Running with BART LM...'):
             ## BART
+            if "nice_name_bart" not in st.session_state:
+                bart()
             is_good, score, counter_example, return_string_BART = gpt2_critic(sent, st.session_state['model_bart'], st.session_state['tokenizer_bart'])
         st.markdown("**Results with BART LM:**")
         st.write('\n'.join(return_string_BART))
@@ -303,6 +299,8 @@ def main():
 
         with st.spinner('Running with XLM RoBERTa LM...'):
             ## XLM RoBERTa
+            if "nice_name_xlmroberta" not in st.session_state:
+                xlm_roberta()
             is_good, score, counter_example, return_string_XLMRoBERTa = gpt2_critic(sent, st.session_state['model_xlmroberta'], st.session_state['tokenizer_xlmroberta'])
         st.markdown("**Results with XLM RoBERTa LM:**")
         st.write('\n'.join(return_string_XLMRoBERTa))
