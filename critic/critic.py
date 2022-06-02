@@ -20,7 +20,7 @@ import streamlit as st
 
 st.subheader('Exploring Unsupervised Grammatical Error Correction with Transformer-Based Models')
 st.write('This live demonstration is adapted from the paper [LM-Critic: Language Models for Unsupervised Grammatical Error Correction](https://aclanthology.org/2021.emnlp-main.611.pdf) (EMNLP 2021) by Michihiro Yasunaga, Jure Leskovec, Percy Liang.')
-st.write('Enter any sentence in the text box, press submit, and see the grammatical scoring and judgement results outputted by LM-Critic using different LMs dislpayed below. Upon running this for the first time, it will initialize each LM.')
+st.write('Enter any sentence in the text box, press submit, and see the grammatical scoring and judgement results outputted by LM-Critic using different LMs displayed below.')
 
 def get_gpt2_loss(model, tokenizer, input_ids, attention_mask, labels):
     with torch.no_grad():
